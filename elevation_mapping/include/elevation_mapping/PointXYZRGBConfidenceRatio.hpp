@@ -29,7 +29,7 @@ struct _PointXYZRGBConfidenceRatio {  // NOLINT(cppcoreguidelines-pro-type-union
     };
     float data_c[4];  // NOLINT(readability-identifier-naming, modernize-avoid-c-arrays)
   };
-  PCL_MAKE_ALIGNED_OPERATOR_NEW
+  EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 } EIGEN_ALIGN16;  // enforce SSE padding for correct memory alignment
 #pragma GCC diagnostic pop
 
