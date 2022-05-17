@@ -33,6 +33,8 @@ float intAsFloat(const uint32_t input) {
 
 namespace elevation_mapping {
 
+    const static Eigen::IOFormat CSVFormat(Eigen::StreamPrecision, Eigen::DontAlignCols, ", ", "\n");
+
 ElevationMap::ElevationMap(ros::NodeHandle nodeHandle)
     : nodeHandle_(nodeHandle),
       rawMap_({"elevation", "variance", "horizontal_variance_x", "horizontal_variance_y", "horizontal_variance_xy", "color", "time",
@@ -542,12 +544,34 @@ void ElevationMap::move(const Eigen::Vector2d& position) {
 }
 
 bool ElevationMap::postprocessAndPublishRawElevationMap() {
-  if (!hasRawMapSubscribers()) {
-    return false;
-  }
+//  if (!hasRawMapSubscribers()) {
+//    return false;
+//  }
   boost::recursive_mutex::scoped_lock scopedLock(rawMapMutex_);
   grid_map::GridMap rawMapCopy = rawMap_;
   scopedLock.unlock();
+
+  std::vector<std::string> layers;
+  layers.push_back("elevation");
+  layers.push_back("variance");
+
+  grid_map::Time timeStamp = rawMapCopy.getTimestamp();
+  std::string timeStr;
+  timeStr = std::to_string(timeStamp);
+
+
+  const char* home = getenv("HOME");
+    for (const auto& layer : layers) {
+        std::string path = home + std::string("/Desktop/elevation_maps/") + layer + std::string("/") + timeStr + ".csv";
+        ROS_WARN(path.c_str());
+        std_msgs::Float32MultiArray dataArray;
+        grid_map::Matrix layerArray;
+        layerArray = rawMapCopy.get(layer);
+//        grid_map::matrixEigenCopyToMultiArrayMessage(rawMapCopy.get(layer), dataArray);
+        std::ofstream file(path.c_str());
+        file << layerArray.format(CSVFormat);
+    }
+
   return postprocessorPool_.runTask(rawMapCopy);
 }
 
@@ -558,6 +582,10 @@ bool ElevationMap::publishFusedElevationMap() {
   boost::recursive_mutex::scoped_lock scopedLock(fusedMapMutex_);
   grid_map::GridMap fusedMapCopy = fusedMap_;
   scopedLock.unlock();
+
+  // also save fused map here :
+
+
   fusedMapCopy.add("uncertainty_range", fusedMapCopy.get("upper_bound") - fusedMapCopy.get("lower_bound"));
   grid_map_msgs::GridMap message;
   grid_map::GridMapRosConverter::toMessage(fusedMapCopy, message);
